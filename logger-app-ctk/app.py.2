@@ -1,0 +1,365 @@
+import logging
+import os
+import threading
+import tkinter as tk
+
+import customtkinter as ctk
+
+import demo
+import logger
+import theme
+
+COLORS = theme.COLORS
+
+LOG_LEVEL_MAP = {
+    "DEBUG":    logging.DEBUG,
+    "INFO":     logging.INFO,
+    "WARNING":  logging.WARNING,
+    "ERROR":    logging.ERROR,
+}
+
+
+class LogView(ctk.CTkFrame, logger.LogView):
+
+    MAX_LINES = 2000
+    TAG_FONT_NORM = ("Courier New", 12)
+    TAG_FONT_BOLD = ("Courier New", 12, "bold")
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.configure(fg_color=COLORS["bg"], corner_radius=12)
+
+        # Toolbar Frame
+        toolbar = ctk.CTkFrame(self, fg_color=COLORS["panel"], corner_radius=8)
+        toolbar.pack(fill="x", padx=(10, 0), pady=(10, 0))
+
+        # Toolbar Title
+        ctk.CTkLabel(
+            toolbar, text="◉ LOG CONSOLE",
+            font=ctk.CTkFont("Courier New", 11, "bold"),
+            text_color=COLORS["accent2"],
+        ).pack(side="left", padx=12, pady=6)
+
+        # Auto-scroll Toggler
+        self._auto_scroll = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            toolbar, text="Auto-scroll",
+            variable=self._auto_scroll,
+            font=ctk.CTkFont("Courier New", 10),
+            text_color=COLORS["dim"],
+            fg_color=COLORS["accent"],
+            hover_color=COLORS["accent2"],
+            checkmark_color="white",
+            border_color=COLORS["border"],
+        ).pack(side="right", padx=(0, 10))
+
+        # Clear Button
+        ctk.CTkButton(
+            toolbar, text="Clear",
+            width=60, height=24,
+            font=ctk.CTkFont("Courier New", 10),
+            fg_color=COLORS["surface"],
+            hover_color=COLORS["border"],
+            text_color=COLORS["dim"],
+            command=self.clear,
+        ).pack(side="right", padx=(0, 10))
+
+        # Log Textbox
+        self._text = ctk.CTkTextbox(
+            self,
+            font=ctk.CTkFont("Courier New", 12),
+            fg_color=COLORS["bg"],
+            text_color=COLORS["fg"],
+            border_width=1,
+            border_color=COLORS["border"],
+            corner_radius=8,
+            wrap="none",
+            state="disabled",
+        )
+        self._text.pack(fill="both", expand=True, padx=(10, 0), pady=(10, 0))
+
+        # Configure tags for coloring
+        self._setup_tags()
+        self._lock = threading.Lock()
+        self._line_count = 0
+
+    def _setup_tags(self):
+        tb = self._text._textbox
+        for level, color in COLORS.items():
+            if level in (logging.getLevelNamesMapping().keys()):
+                tb.tag_configure(level, foreground=color, font=self.TAG_FONT_BOLD)
+        tb.tag_configure("ts",      foreground=COLORS["ts"],   font=self.TAG_FONT_NORM)
+        tb.tag_configure("name",    foreground=COLORS["name"], font=self.TAG_FONT_NORM)
+        tb.tag_configure("msg",     foreground=COLORS["fg"],   font=self.TAG_FONT_NORM)
+        tb.tag_configure("nobody",  foreground="#ffffff",    font=self.TAG_FONT_NORM)
+
+    def append(self, timestamp: str, level: str, name: str, message: str):
+        """Thread-safe append"""
+        def _do():
+            with self._lock:
+                tb = self._text._textbox
+                tb.configure(state="normal")
+
+                # Delete a line out of scale
+                self._line_count += 1
+                if self._line_count > self.MAX_LINES:
+                    tb.delete("1.0", "2.0")
+                    self._line_count -= 1
+
+                # Compose line with tags
+                tb.insert("end", f"[{timestamp}] ", "ts")
+                tag = level
+                tb.insert("end", f"{level:<8}", tag)
+                tb.insert("end", f" {name}: ", "name")
+                tb.insert("end", f"{message}\n", "msg")
+
+                tb.configure(state="disabled")
+                if self._auto_scroll.get():
+                    tb.see("end")
+
+        self._text.after(0, _do)
+
+    def clear(self):
+        tw = self._text._textbox
+        tw.configure(state="normal")
+        tw.delete("1.0", "end")
+        tw.configure(state="disabled")
+        self._line_count = 0
+
+
+class MyLoggerApp(ctk.CTk):
+
+    def __init__(self):
+        super().__init__()
+        ctk.set_appearance_mode("dark")
+
+        self.title("My Logger")
+        self.geometry("1000x680")
+        self.configure(fg_color=COLORS["bg"])
+        self._init_vars()
+        self._init_ui()
+        self._post_ui()
+
+    def _init_vars(self):
+        self._app_name = "app"
+        self._log_level = logging.DEBUG
+        self._base_dir = os.path.dirname(os.path.abspath(__file__))
+        self._msg_var = ctk.StringVar(value="Enter a message to log...")
+        self._level_var = ctk.StringVar(value="INFO")
+
+    def _init_ui(self):
+        # Header Frame
+        hdr = ctk.CTkFrame(self, fg_color=COLORS["panel"], corner_radius=0, height=64)
+        hdr.pack(fill="x")
+        hdr.pack_propagate(False)
+        ctk.CTkLabel(
+            hdr, text="⬡ MY LOGGER",
+            font=ctk.CTkFont("Courier New", 16, "bold"),
+            text_color=COLORS["accent"],
+        ).pack(side="left", padx=24)
+        ctk.CTkLabel(
+            hdr, text="Demo Template - @2ruman",
+            font=ctk.CTkFont("Courier New", 10),
+            text_color=COLORS["dim"],
+        ).pack(side="right", padx=24)
+
+        # Body Frame
+        body = ctk.CTkFrame(self, fg_color="transparent")
+        body.pack(fill="both", expand=True, padx=16, pady=(12, 0))
+        body.columnconfigure(0, weight=1)
+        body.columnconfigure(1, weight=3)
+        body.rowconfigure(0, weight=1)
+        body.rowconfigure(1, weight=0)
+
+        # Left(0,0) Grid
+        left = ctk.CTkFrame(body, fg_color=COLORS["panel"], corner_radius=12)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        self._init_controls(left)
+
+        # Right(0,1) Grid
+        self._log_view = LogView(body)
+        self._log_view.grid(row=0, column=1, sticky="nsew")
+
+        # Author Info
+        ctk.CTkLabel(body, text="https://github.com/2ruman",
+                     font=ctk.CTkFont("Courier New", 10),
+                     text_color=COLORS["dim"]).grid(row=1, column=1, sticky="es")
+
+    def _init_controls(self, parent):
+        ctk.CTkLabel(
+            parent, text="LOG CONTROLS",
+            font=ctk.CTkFont("Courier New", 11, "bold"),
+            text_color=COLORS["accent2"],
+        ).pack(pady=(18, 16), padx=16, anchor="w")
+
+        # Image Frame
+        img_frame = ctk.CTkFrame(parent, fg_color=COLORS["border"], corner_radius=6)
+        img_frame.pack(pady=(0, 16), padx=16)
+
+        try:
+            from PIL import Image
+
+            img_path = "images/profile.png"
+            if os.path.exists(img_path):
+                pil_img = Image.open(img_path)
+                pil_img = pil_img.resize((120, 160), Image.Resampling.LANCZOS)
+                ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(120, 160))
+
+                img_label = ctk.CTkLabel(img_frame, image=ctk_img, text="")
+                img_label.image = ctk_img
+                img_label.pack(padx=2, pady=2)
+            else:
+                placeholder = ctk.CTkLabel(
+                    img_frame, text="📸\nNO IMAGE",
+                    font=ctk.CTkFont("Courier New", 12),
+                    text_color=COLORS["dim"],
+                    width=120, height=160
+                )
+                placeholder.pack(padx=2, pady=2)
+        except ImportError:
+            placeholder = ctk.CTkLabel(
+                img_frame, text="PIL\nNOT FOUND",
+                font=ctk.CTkFont("Courier New", 12),
+                text_color=COLORS["dim"],
+                width=120, height=160
+            )
+            placeholder.pack(padx=2, pady=2)
+
+        # Divider
+        ctk.CTkFrame(parent, height=2, fg_color=COLORS["border"]).pack(fill="x", padx=16)
+
+        # Message Label
+        ctk.CTkLabel(parent, text="Message",
+                     font=ctk.CTkFont("Courier New", 10),
+                     text_color=COLORS["dim"]).pack(anchor="w", padx=16, pady=(14, 2))
+
+        # Message Input
+        self._msg_entry = ctk.CTkEntry(
+            parent, textvariable=self._msg_var,
+            font=ctk.CTkFont("Courier New", 12),
+            fg_color=COLORS["surface"],
+            border_color=COLORS["border"],
+            text_color=COLORS["fg"],
+        )
+        self._msg_entry.pack(fill="x", padx=16)
+
+        # Level Label
+        ctk.CTkLabel(parent, text="Level",
+                     font=ctk.CTkFont("Courier New", 10),
+                     text_color=COLORS["dim"]).pack(anchor="w", padx=16, pady=(12, 2))
+
+        # Level Selector
+        self._level_opm = ctk.CTkOptionMenu(
+            parent, values=list(LOG_LEVEL_MAP.keys()),
+            variable=self._level_var,
+            font=ctk.CTkFont("Courier New", 12),
+            fg_color=COLORS["surface"],
+            button_color=COLORS["accent"],
+            button_hover_color=COLORS["accent2"],
+            text_color=COLORS["fg"],
+            dropdown_fg_color=COLORS["surface"],
+            dropdown_hover_color=COLORS["border"],
+        )
+        self._level_opm.pack(fill="x", padx=16, pady=(0, 16))
+
+        # Log Button
+        self._log_btn = ctk.CTkButton(
+            parent, text="▶  Log Message",
+            font=ctk.CTkFont("Courier New", 12, "bold"),
+            fg_color=COLORS["accent"],
+            hover_color=COLORS["accent2"],
+            text_color="white",
+            height=36,
+            command=self._log_message,
+        )
+        self._log_btn.pack(fill="x", padx=16, pady=(0, 6))
+
+        # Demo Button
+        ctk.CTkButton(
+            parent, text="⚡  Run Demo Burst",
+            font=ctk.CTkFont("Courier New", 12),
+            fg_color=COLORS["surface"],
+            hover_color=COLORS["border"],
+            text_color=COLORS["accent2"],
+            height=36,
+            command=self._demo_burst,
+        ).pack(fill="x", padx=16, pady=(0, 16))
+
+        # Divider
+        ctk.CTkFrame(parent, height=2, fg_color=COLORS["border"]).pack(fill="x", padx=16)
+
+        # Save Location Info
+        ctk.CTkLabel(parent, text="Save location  »  log",
+                     font=ctk.CTkFont("Courier New", 10),
+                     text_color=COLORS["dim"]).pack(padx=16, anchor="w")
+
+    def _post_ui(self):
+        self._view_handler = logger.ViewHandler.from_log_view(self._log_view)
+        self._file_handler = logger.FileHandler.from_base_dir(self._base_dir)
+        self._logger = logger.AppLogger(self._app_name, self._log_level,
+                                        self._view_handler, self._file_handler)
+        self.bind("<Return>", self.on_enter)
+        self.bind("<Escape>", self.on_escape)
+        self.bind("<Up>",     self.on_up)
+        self.bind("<Down>",   self.on_down)
+        self.bind("<Key>",    self.on_key)
+
+    def on_enter(self, event):
+        self._log_btn.invoke()
+        return "break"
+
+    def on_escape(self, event):
+        self._msg_entry.delete(0, "end")
+        self.focus_set()
+        return "break"
+
+    def on_up(self, event):
+        self.rotate_levels(-1)
+        return "break"
+
+    def on_down(self, event):
+        self.rotate_levels(1)
+        return "break"
+
+    def rotate_levels(self, direction):
+        curr_val = self._level_opm.get()
+        curr_idx = self._level_opm._values.index(curr_val)
+        new_idx = (curr_idx + direction) % len(self._level_opm._values)
+        self._level_opm.set(self._level_opm._values[new_idx])
+
+    def on_key(self, event):
+        if event.keysym in ("Return", "Escape", "Up", "Down"):
+            return
+
+        if isinstance(self.focus_get(), tk.Entry):
+            return
+
+        if not event.char.isprintable():
+            return
+
+        self._msg_entry.focus_set()
+        self._msg_entry.insert("end", event.char)
+        self._msg_entry.icursor("end")
+
+    def _log_message(self):
+        msg = self._msg_var.get()
+        level = self._level_var.get()
+
+        fn_map = {
+            "DEBUG":   self._logger.d,
+            "INFO":    self._logger.i,
+            "WARNING": self._logger.w,
+            "ERROR":   self._logger.e,
+        }
+        fn_map.get(level, self._logger.d)(msg)
+
+    def _demo_burst(self):
+        def run():
+            demo.play(self._logger)
+
+        threading.Thread(target=run, daemon=True).start()
+
+
+if __name__ == "__main__":
+    app = MyLoggerApp()
+    app.mainloop()
