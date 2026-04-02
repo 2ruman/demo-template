@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Toolbar area -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@color/wa_dark_green"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginBottom="24dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_title"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pref_start_on_cmd"
+            android:textColor="@color/wa_text_secondary"
+            android:textSize="12sp"/>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/sw_start_on_cmd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pref_echo_mode"
+            android:textColor="@color/wa_text_secondary"
+            android:textSize="12sp"/>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/sw_echo_mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pref_server_ip"
+            android:textColor="@color/wa_text_secondary"
+            android:textSize="12sp"/>
+        <EditText
+            android:id="@+id/et_server_ip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="@color/wa_teal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pref_server_port"
+            android:textColor="@color/wa_text_secondary"
+            android:textSize="12sp"/>
+        <EditText
+            android:id="@+id/et_server_port"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="@color/wa_teal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pref_tls_port"
+            android:textColor="@color/wa_text_secondary"
+            android:textSize="12sp"/>
+        <EditText
+            android:id="@+id/et_tls_port"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="@color/wa_teal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pref_partner_name"
+            android:textColor="@color/wa_text_secondary"
+            android:textSize="12sp"/>
+        <EditText
+            android:id="@+id/et_partner_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="@color/wa_teal"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pref_time_gap"
+            android:textColor="@color/wa_text_secondary"
+            android:textSize="12sp"/>
+        <EditText
+            android:id="@+id/et_time_gap"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:layout_marginBottom="32dp"
+            android:backgroundTint="@color/wa_teal"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_save"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Save"
+            app:backgroundTint="@color/wa_green"
+            app:cornerRadius="8dp"/>
+
+    </LinearLayout>
+</ScrollView>

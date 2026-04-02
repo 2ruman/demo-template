@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Material Icons: "chat" (filled)
+    Source: https://github.com/google/material-design-icons
+    License: Apache 2.0
+    Scaled from 24x24 to 48x48 and centered in 108x108 viewport (scale×2, translate+30)
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,34H38c-2.2,0-4,1.8-4,4v36l8,-8h28c2.2,0,4-1.8,4-4V38c0-2.2-1.8-4-4-4z" />
+</vector>

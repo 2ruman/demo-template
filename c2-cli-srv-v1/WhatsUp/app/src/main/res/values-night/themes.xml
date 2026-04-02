@@ -1,0 +1,8 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.WhatsUp" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/wa_dark_green</item>
+        <item name="colorPrimaryVariant">@color/wa_teal</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/wa_green</item>
+    </style>
+</resources>

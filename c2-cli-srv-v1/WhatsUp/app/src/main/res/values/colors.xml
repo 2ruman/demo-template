@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="wa_green">#25D366</color>
+    <color name="wa_dark_green">#075E54</color>
+    <color name="wa_teal">#128C7E</color>
+    <color name="wa_light_green">#DCF8C6</color>
+    <color name="wa_received_bg">#FFFFFF</color>
+    <color name="wa_chat_bg">#ECE5DD</color>
+    <color name="wa_text_primary">#000000</color>
+    <color name="wa_text_secondary">#667781</color>
+    <color name="wa_divider">#E0E0E0</color>
+</resources>
