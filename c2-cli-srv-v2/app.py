@@ -3,73 +3,26 @@ import queue
 import threading
 import time
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import override
 
 import customtkinter as ctk
 from PIL import Image
 
-import theme
+from handler import Handler
+from logger import Logger
+from theme import COLORS
+from ups import UPLOADS_DIR, UploadServer
 
-COLORS = theme.COLORS
-
-HOST = "0.0.0.0"
+DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8080
-UPLOADS_DIR = "uploads"
 MIN_DISPLAY_SEC = 1.0
-
-
-class UploadHandler(BaseHTTPRequestHandler):
-
-    app = None
-
-    def do_POST(self):
-        if self.path != "/upload":
-            self.send_response(404)
-            self.end_headers()
-            return
-
-        content_length = int(self.headers.get("Content-Length", 0))
-        if content_length == 0:
-            self.send_response(400)
-            self.end_headers()
-            return
-
-        data = self.rfile.read(content_length)
-
-        content_type = self.headers.get("Content-Type", "image/jpeg")
-        ext_map = {
-            "image/jpeg": ".jpg",
-            "image/png":  ".png",
-            "image/gif":  ".gif",
-            "image/webp": ".webp",
-            "image/bmp":  ".bmp",
-        }
-        ext = ext_map.get(content_type, ".jpg")
-
-        os.makedirs(UPLOADS_DIR, exist_ok=True)
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        filename = f"{ts}{ext}"
-        filepath = os.path.join(UPLOADS_DIR, filename)
-
-        with open(filepath, "wb") as f:
-            f.write(data)
-
-        if self.app:
-            self.app.on_image_received(filepath, len(data))
-
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"OK")
-
-    def log_message(self, format, *args):
-        pass
 
 
 class LogView(ctk.CTkFrame):
 
     MAX_LINES = 2000
-    TAG_FONT_NORM = ("Courier New", 12)
-    TAG_FONT_BOLD = ("Courier New", 12, "bold")
+    TAG_FONT_NORM = ("Courier New", 8)
+    TAG_FONT_BOLD = ("Courier New", 8, "bold")
 
     def __init__(self, parent, **kwargs):
         super().__init__(parent, **kwargs)
@@ -164,7 +117,7 @@ class ImageView(ctk.CTkFrame):
         self.configure(fg_color=COLORS["bg"], corner_radius=12)
 
         toolbar = ctk.CTkFrame(self, fg_color=COLORS["panel"], corner_radius=8)
-        toolbar.pack(fill="x", padx=(10, 10), pady=(10, 0))
+        toolbar.pack(fill="x", padx=(10, 0), pady=(10, 0))
 
         ctk.CTkLabel(
             toolbar, text="◈ IMAGE VIEWER",
@@ -193,7 +146,7 @@ class ImageView(ctk.CTkFrame):
             border_width=1,
             border_color=COLORS["border"],
         )
-        self._img_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self._img_frame.pack(fill="both", expand=True, padx=(10, 0), pady=(10, 0))
 
         self._img_label = ctk.CTkLabel(
             self._img_frame,
@@ -229,7 +182,7 @@ class ImageView(ctk.CTkFrame):
         self._queue_label.configure(text=f"Queue: {size}")
 
 
-class C2Server(ctk.CTk):
+class C2Server(ctk.CTk, Logger, Handler):
 
     def __init__(self):
         super().__init__()
@@ -239,14 +192,13 @@ class C2Server(ctk.CTk):
         self.geometry("1280x740")
         self.configure(fg_color=COLORS["bg"])
 
-        self._server = None
-        self._server_thread = None
         self._img_queue = queue.Queue()
         self._total_received = 0
         self._running = False
+        self._ups = None
 
         self._init_ui()
-        self._start_server()
+        self._start_servers()
         self._start_display_loop()
 
     def _init_ui(self):
@@ -269,8 +221,8 @@ class C2Server(ctk.CTk):
         body = ctk.CTkFrame(self, fg_color="transparent")
         body.pack(fill="both", expand=True, padx=16, pady=(12, 0))
         body.columnconfigure(0, weight=1)
-        body.columnconfigure(1, weight=2)
-        body.columnconfigure(2, weight=3)
+        body.columnconfigure(1, weight=5)
+        body.columnconfigure(2, weight=4)
         body.rowconfigure(0, weight=1)
         body.rowconfigure(1, weight=0)
 
@@ -379,49 +331,73 @@ class C2Server(ctk.CTk):
             hover_color="#cc3333",
             text_color="white",
             height=36,
-            command=self._toggle_server,
+            command=self._toggle_servers,
         )
         self._toggle_btn.pack(fill="x", padx=16)
 
         # Uploads path
         ctk.CTkFrame(parent, height=2, fg_color=COLORS["border"]).pack(fill="x", padx=16, pady=(16, 8))
         ctk.CTkLabel(
-            parent, text=f"Uploads  »  {UPLOADS_DIR}",
+            parent, text=f"Uploads  »  {os.path.basename(UPLOADS_DIR)}",
             font=ctk.CTkFont("Courier New", 10),
             text_color=COLORS["dim"],
         ).pack(anchor="w", padx=16)
+
+    @override
+    def d(self, msg: str):
+        self.after(0, lambda: self._log("DEBUG", msg))
+
+    @override
+    def i(self, msg: str):
+        self.after(0, lambda: self._log("INFO", msg))
+
+    @override
+    def w(self, msg: str):
+        self.after(0, lambda: self._log("WARNING", msg))
+
+    @override
+    def e(self, msg: str):
+        self.after(0, lambda: self._log("ERROR", msg))
+
+    @override
+    def s(self, msg: str):
+        self.after(0, lambda: self._log("SUCCESS", msg))
+
+    @override
+    def c(self, msg: str):
+        self.after(0, lambda: self._log("CRITICAL", msg))
 
     def _log(self, level: str, message: str):
         ts = datetime.now().strftime("%H:%M:%S")
         self._log_view.append(ts, level, "server", message)
 
-    def _start_server(self):
-        os.makedirs(UPLOADS_DIR, exist_ok=True)
-        UploadHandler.app = self
-        self._server = HTTPServer((HOST, DEFAULT_PORT), UploadHandler)
+    def _start_servers(self):
         self._running = True
-        self._server_thread = threading.Thread(
-            target=self._server.serve_forever, daemon=True
-        )
-        self._server_thread.start()
-        self.after(100, lambda: self._update_status(True))
-        self.after(150, lambda: self._log("INFO", f"Server listening on {HOST}:{DEFAULT_PORT}"))
-        self.after(200, lambda: self._log("INFO", "POST /upload  —  send image files"))
-        self.after(250, lambda: self._log("DEBUG", f"Uploads directory: {os.path.abspath(UPLOADS_DIR)}"))
-
-    def _stop_server(self):
-        if self._server:
-            self._server.shutdown()
-            self._server = None
-        self._running = False
-        self.after(0, lambda: self._update_status(False))
-        self.after(0, lambda: self._log("WARNING", "Server stopped"))
-
-    def _toggle_server(self):
-        if self._running:
-            threading.Thread(target=self._stop_server, daemon=True).start()
+        if self._ups:
+            self.d("Server already running")
+            return
         else:
-            self._start_server()
+            self._ups = UploadServer(
+                logger=self, handler=self, host=DEFAULT_HOST, port=DEFAULT_PORT).start()
+
+        self.after(100, lambda: self._update_status(True))
+        self.i(f"Server listening on {self._ups.host}:{self._ups.port}")
+        self.i("POST /upload  —  where to send image files")
+        self.d(f"Uploads directory: {UPLOADS_DIR}")
+
+    def _stop_servers(self):
+        self._running = False
+        if self._ups:
+            self._ups.shutdown()
+            self._ups = None
+        self.after(0, lambda: self._update_status(False))
+        self.w("Server stopped")
+
+    def _toggle_servers(self):
+        if self._running:
+            self._stop_servers()
+        else:
+            self._start_servers()
 
     def _update_status(self, running: bool):
         if running:
@@ -439,7 +415,8 @@ class C2Server(ctk.CTk):
                 hover_color=COLORS["accent2"],
             )
 
-    def on_image_received(self, filepath: str, size: int):
+    @override
+    def on_file_received(self, filepath: str, size: int):
         """Called from HTTP handler thread — thread-safe via after()"""
         self._img_queue.put(filepath)
         self._total_received += 1
@@ -448,8 +425,8 @@ class C2Server(ctk.CTk):
 
         def _update():
             self._received_label.configure(text=f"{count} images")
-            self._log("SUCCESS", f"Saved: {os.path.basename(filepath)} ({size:,} bytes)")
-            self._log("DEBUG",   f"Queue size: {qsize}")
+            self.s(f"Saved: {os.path.basename(filepath)} ({size:,} bytes)")
+            self.d(f"Queue size: {qsize}")
 
         self.after(0, _update)
 
