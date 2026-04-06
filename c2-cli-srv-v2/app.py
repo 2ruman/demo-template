@@ -215,7 +215,6 @@ class C2Server(ctk.CTk, Logger, Handler):
         self._ups = None
 
         ToastNotification._single = True
-        ToastNotification._center = True
 
         self._init_ui()
         self._start_servers()
@@ -286,12 +285,14 @@ class C2Server(ctk.CTk, Logger, Handler):
             img_label.image = ctk_img
             img_label.pack(padx=2, pady=2)
         else:
-            ctk.CTkLabel(
+            img_label = ctk.CTkLabel(
                 img_frame, text="NO IMAGE",
                 font=ctk.CTkFont("Courier New", 12),
                 text_color=COLORS["dim"],
                 width=120, height=160,
-            ).pack(padx=2, pady=2)
+            )
+            img_label.pack(padx=2, pady=2)
+        ToastNotification._anchor = img_label
 
         # Divider
         ctk.CTkFrame(parent, height=2, fg_color=COLORS["border"]).pack(fill="x", padx=16, pady=(0, 16))

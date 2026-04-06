@@ -22,6 +22,7 @@ class ToastNotification:
     _stack = []
     _single = False
     _center = False
+    _anchor = None  # widget to position next to (right side, vertically centered)
 
     def __init__(self, parent, message: str, duration: int = 2000, type: str = "INFO",
                  r_corner: bool = True):
@@ -83,7 +84,20 @@ class ToastNotification:
 
         if single is not None:
             if self.frame.winfo_exists():
-                if ToastNotification._center:
+                anchor = ToastNotification._anchor
+                if anchor is not None and anchor.winfo_exists():
+                    th = self.win.winfo_height()
+                    wx = anchor.winfo_rootx() + anchor.winfo_width() + 8
+                    """ Center vs Top vs Bottom """
+                    # Center-aligned
+                    # wy = anchor.winfo_rooty() + (anchor.winfo_height() - th) // 2
+                    # Top-aligned
+                    wy = anchor.winfo_rooty()
+                    # Bottom-aligned
+                    # wy = anchor.winfo_rooty() + (anchor.winfo_height() - th)
+                    """ ----------------------- """
+                    self.win.geometry(f"+{wx}+{wy}")
+                elif ToastNotification._center:
                     tw = self.win.winfo_width()
                     th = self.win.winfo_height()
                     wx = px + (self.parent.winfo_width() - tw) // 2
