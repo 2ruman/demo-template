@@ -11,6 +11,7 @@ from PIL import Image
 from handler import Handler
 from logger import Logger
 from theme import COLORS
+from toast import ToastNotification
 from ups import UPLOADS_DIR, UploadServer
 
 DEFAULT_HOST = "0.0.0.0"
@@ -41,6 +42,18 @@ class LogView(ctk.CTkFrame):
         ctk.CTkCheckBox(
             toolbar, text="Auto-scroll",
             variable=self._auto_scroll,
+            font=ctk.CTkFont("Courier New", 10),
+            text_color=COLORS["dim"],
+            fg_color=COLORS["accent"],
+            hover_color=COLORS["accent2"],
+            checkmark_color="white",
+            border_color=COLORS["border"],
+        ).pack(side="right", padx=(0, 10))
+
+        self._notification = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            toolbar, text="Notification",
+            variable=self._notification,
             font=ctk.CTkFont("Courier New", 10),
             text_color=COLORS["dim"],
             fg_color=COLORS["accent"],
@@ -101,6 +114,10 @@ class LogView(ctk.CTkFrame):
                 if self._auto_scroll.get():
                     tb.see("end")
         self._text.after(0, _do)
+
+    @property
+    def notification_enabled(self):
+        return self._notification.get()
 
     def clear(self):
         tw = self._text._textbox
@@ -427,6 +444,12 @@ class C2Server(ctk.CTk, Logger, Handler):
             self._received_label.configure(text=f"{count} images")
             self.s(f"Saved: {os.path.basename(filepath)} ({size:,} bytes)")
             self.d(f"Queue size: {qsize}")
+            if self._log_view.notification_enabled:
+                ToastNotification(
+                    self,
+                    f"Received: {os.path.basename(filepath)} ({size:,} bytes)",
+                    type="SUCCESS",
+                )
 
         self.after(0, _update)
 
