@@ -22,7 +22,7 @@ class ToastNotification:
     _stack = []
     _single = False
     _center = False
-    _anchor = None  # widget to position next to (right side, vertically centered)
+    _anchor = None
 
     def __init__(self, parent, message: str, duration: int = 2000, type: str = "INFO",
                  r_corner: bool = True):

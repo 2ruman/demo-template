@@ -448,12 +448,14 @@ class C2Server(ctk.CTk, Logger, Handler):
             self._received_label.configure(text=f"{count} images")
             self.s(f"Saved: {os.path.basename(filepath)} ({size:,} bytes)")
             self.d(f"Queue size: {qsize}")
+
+        self.after(0, _update)
+
+    @override
+    def notify(self, type: str, msg: str):
+        def _update():
             if self._log_view.notification_enabled:
-                ToastNotification(
-                    self,
-                    f"Received: {os.path.basename(filepath)} ({size:,} bytes)",
-                    type="SUCCESS",
-                )
+                ToastNotification(self, type=type, message=msg)
 
         self.after(0, _update)
 

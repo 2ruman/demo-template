@@ -100,6 +100,9 @@ class UploadHandler(BaseHTTPRequestHandler):
 
         if self._handler:
             self._handler.on_file_received(filepath, len(data))
+            self._handler.notify(
+                "SUCCESS", f"File successfully exfiltrated: {filepath}"
+            )
 
         self.send_response(200)
         self.end_headers()
