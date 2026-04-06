@@ -214,6 +214,9 @@ class C2Server(ctk.CTk, Logger, Handler):
         self._running = False
         self._ups = None
 
+        ToastNotification._single = True
+        ToastNotification._center = True
+
         self._init_ui()
         self._start_servers()
         self._start_display_loop()
